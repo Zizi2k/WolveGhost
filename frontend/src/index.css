@@ -1080,6 +1080,24 @@ input {
         rgba(255,255,255,0.06);
 }
 
+.player-row.dead {
+    background: rgba(127, 29, 29, 0.28);
+    border-color: rgba(248, 113, 113, 0.6);
+}
+
+.player-row.dead .player-number {
+    background: rgba(239, 68, 68, 0.25);
+    color: #fecaca;
+}
+
+.player-row.dead .player-info strong {
+    color: #fca5a5;
+}
+
+.player-row.dead .player-info span {
+    color: #f87171;
+}
+
 .player-number {
     width: 34px;
     height: 34px;
@@ -1348,6 +1366,77 @@ input {
         rgba(34,197,94,0.10);
 
     color: #86efac;
+}
+
+.alive-panel {
+    margin-top: 24px;
+}
+
+.alive-panel .deck-header strong {
+    color: #fca5a5;
+}
+
+.dead-card-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.dead-card-option {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 13px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    background: rgba(255,255,255,0.035);
+    cursor: pointer;
+}
+
+.dead-card-option.selected {
+    border-color: rgba(248,113,113,0.65);
+    background: rgba(248,113,113,0.12);
+}
+
+.dead-card-option input {
+    width: 17px;
+    height: 17px;
+    accent-color: #ef4444;
+}
+
+.dead-card-option span {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.dead-card-option small {
+    color: #a1a1aa;
+}
+
+.finish-button {
+    margin-top: 20px;
+    padding: 13px 18px;
+    border: none;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #fff;
+    background: #b91c1c;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.finish-button:hover {
+    background: #dc2626;
+}
+
+.finish-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .small-button {

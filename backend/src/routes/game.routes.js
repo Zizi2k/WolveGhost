@@ -3,6 +3,8 @@ import express from "express";
 import {
     createGame,
     dealCharacters,
+    finishGame,
+    updateGameDeaths,
 } from "../controllers/game.controller.js";
 
 import {
@@ -27,6 +29,20 @@ router.post(
     authenticate,
     authorize("HOST"),
     dealCharacters
+);
+
+router.post(
+    "/games/:gameId/finish",
+    authenticate,
+    authorize("HOST"),
+    finishGame
+);
+
+router.put(
+    "/games/:gameId/deaths",
+    authenticate,
+    authorize("HOST"),
+    updateGameDeaths
 );
 
 export default router;

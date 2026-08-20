@@ -6,7 +6,8 @@ import {
 import {
     Plus,
     DoorOpen,
-    Users
+    Users,
+    Trash2
 } from "lucide-react";
 
 import {
@@ -90,6 +91,25 @@ export default function RoomManagement() {
                         ?.data
                         ?.message ||
                     "Không thể tạo phòng"
+                );
+            }
+        };
+
+        const deleteRoom = async (room) => {
+            if (!window.confirm(`Xóa phòng "${room.name}"?`)) {
+                return;
+            }
+
+            try {
+                await api.delete(`/rooms/${room.id}`);
+                setRooms((current) =>
+                    current.filter((item) => item.id !== room.id)
+                );
+                setMessage("Xóa phòng thành công");
+            } catch (error) {
+                setMessage(
+                    error.response?.data?.message ||
+                    "Không thể xóa phòng"
                 );
             }
         };
@@ -230,6 +250,17 @@ export default function RoomManagement() {
                                                 room.status
                                             }
                                         </span>
+
+                                        <button
+                                            className="icon-danger room-delete-button"
+                                            title="Xóa phòng"
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                deleteRoom(room);
+                                            }}
+                                        >
+                                            <Trash2 size={17} />
+                                        </button>
 
                                     </div>
 

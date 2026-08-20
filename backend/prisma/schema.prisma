@@ -137,7 +137,7 @@ model GamePlayer {
   game   Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
 
   playerId Int
-  player   Player @relation(fields: [playerId], references: [id])
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   characterId Int
   character   Character @relation(fields: [characterId], references: [id])

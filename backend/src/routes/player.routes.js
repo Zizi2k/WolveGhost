@@ -6,6 +6,7 @@ import {
     deletePlayer,
     resetPlayerPassword,
     setPlayerPassword,
+    setPlayerUsername,
 } from "../controllers/player.controller.js";
 
 import {
@@ -17,6 +18,13 @@ import {
 } from "../middlewares/role.middleware.js";
 
 const router = express.Router();
+
+router.post(
+    "/rooms/:roomId/players",
+    authenticate,
+    authorize("HOST"),
+    addPlayer
+);
 
 router.post(
     "/rooms/:roomId/players/:playerId/reset-password",
@@ -36,6 +44,13 @@ router.put(
     authenticate,
     authorize("HOST"),
     setPlayerPassword
+);
+
+router.put(
+    "/rooms/:roomId/players/:playerId/username",
+    authenticate,
+    authorize("HOST"),
+    setPlayerUsername
 );
 
 router.delete(

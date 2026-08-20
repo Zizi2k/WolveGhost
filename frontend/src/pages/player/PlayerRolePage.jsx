@@ -20,6 +20,15 @@ export default function PlayerRolePage() {
 
         loadRole();
 
+        const refreshTimer = window.setInterval(
+            loadRole,
+            3000
+        );
+
+        return () => {
+            window.clearInterval(refreshTimer);
+        };
+
     }, []);
 
     const loadRole =

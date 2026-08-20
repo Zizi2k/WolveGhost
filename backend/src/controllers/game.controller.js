@@ -79,7 +79,10 @@ export const createGame = async (
             });
         }
 
-        if (room.status !== "WAITING") {
+        if (
+            room.status !== "WAITING" &&
+            room.status !== "FINISHED"
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
@@ -358,6 +361,204 @@ export const dealCharacters = async (
             success: false,
             message:
                 "Không thể phát bài",
+        });
+    }
+};
+
+export const finishGame = async (
+    req,
+    res
+) => {
+    try {
+        const gameId = Number(req.params.gameId);
+        const deadPlayerIds = req.body.deadPlayerIds;
+
+        if (!Array.isArray(deadPlayerIds)) {
+            return res.status(400).json({
+                success: false,
+                message: "Danh sách thẻ đã chết không hợp lệ",
+            });
+        }
+
+        const game = await prisma.game.findFirst({
+            where: {
+                id: gameId,
+                isActive: true,
+                room: {
+                    hostId: req.user.id,
+                },
+            },
+            include: {
+                gamePlayers: true,
+            },
+        });
+
+        if (!game) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy ván đang chơi",
+            });
+        }
+
+        const validPlayerIds = new Set(
+            game.gamePlayers.map((gamePlayer) => gamePlayer.playerId)
+        );
+
+        if (deadPlayerIds.some((playerId) => {
+            return !Number.isInteger(Number(playerId)) ||
+                !validPlayerIds.has(Number(playerId));
+        })) {
+            return res.status(400).json({
+                success: false,
+                message: "Có thẻ không thuộc ván chơi này",
+            });
+        }
+
+        const uniqueDeadPlayerIds = [
+            ...new Set(deadPlayerIds.map(Number)),
+        ];
+
+        await prisma.$transaction(async (tx) => {
+            await tx.gamePlayer.updateMany({
+                where: {
+                    gameId,
+                },
+                data: {
+                    isAlive: true,
+                },
+            });
+
+            if (uniqueDeadPlayerIds.length > 0) {
+                await tx.gamePlayer.updateMany({
+                    where: {
+                        gameId,
+                        playerId: {
+                            in: uniqueDeadPlayerIds,
+                        },
+                    },
+                    data: {
+                        isAlive: false,
+                    },
+                });
+            }
+
+            await tx.game.update({
+                where: {
+                    id: gameId,
+                },
+                data: {
+                    isActive: false,
+                    endedAt: new Date(),
+                    room: {
+                        update: {
+                            status: "FINISHED",
+                        },
+                    },
+                },
+            });
+        });
+
+        return res.json({
+            success: true,
+            message: "Đã kết thúc ván chơi",
+        });
+    } catch (error) {
+        console.error("FINISH GAME ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Không thể kết thúc ván chơi",
+        });
+    }
+};
+
+export const updateGameDeaths = async (
+    req,
+    res
+) => {
+    try {
+        const gameId = Number(req.params.gameId);
+        const deadPlayerIds = req.body.deadPlayerIds;
+
+        if (!Array.isArray(deadPlayerIds)) {
+            return res.status(400).json({
+                success: false,
+                message: "Danh sách thẻ đã chết không hợp lệ",
+            });
+        }
+
+        const game = await prisma.game.findFirst({
+            where: {
+                id: gameId,
+                isActive: true,
+                room: {
+                    hostId: req.user.id,
+                },
+            },
+            include: {
+                gamePlayers: true,
+            },
+        });
+
+        if (!game) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy ván đang chơi",
+            });
+        }
+
+        const validPlayerIds = new Set(
+            game.gamePlayers.map((gamePlayer) => gamePlayer.playerId)
+        );
+        const uniqueDeadPlayerIds = [
+            ...new Set(deadPlayerIds.map(Number)),
+        ];
+
+        if (deadPlayerIds.some((playerId) => {
+            return !Number.isInteger(Number(playerId)) ||
+                !validPlayerIds.has(Number(playerId));
+        })) {
+            return res.status(400).json({
+                success: false,
+                message: "Có thẻ không thuộc ván chơi này",
+            });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            await tx.gamePlayer.updateMany({
+                where: {
+                    gameId,
+                },
+                data: {
+                    isAlive: true,
+                },
+            });
+
+            if (uniqueDeadPlayerIds.length > 0) {
+                await tx.gamePlayer.updateMany({
+                    where: {
+                        gameId,
+                        playerId: {
+                            in: uniqueDeadPlayerIds,
+                        },
+                    },
+                    data: {
+                        isAlive: false,
+                    },
+                });
+            }
+        });
+
+        return res.json({
+            success: true,
+            message: "Đã cập nhật trạng thái thẻ",
+        });
+    } catch (error) {
+        console.error("UPDATE GAME DEATHS ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Không thể cập nhật trạng thái thẻ",
         });
     }
 };

@@ -102,6 +102,53 @@ export const getMyRooms = async (req, res) => {
         });
     }
 };
+
+export const deleteRoom = async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+
+        const room = await prisma.room.findFirst({
+            where: {
+                id,
+                hostId: req.user.id,
+            },
+        });
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy phòng",
+            });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            await tx.game.deleteMany({
+                where: {
+                    roomId: id,
+                },
+            });
+
+            await tx.room.delete({
+                where: {
+                    id,
+                },
+            });
+        });
+
+        return res.json({
+            success: true,
+            message: "Xóa phòng thành công",
+        });
+    } catch (error) {
+        console.error("DELETE ROOM ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Không thể xóa phòng",
+        });
+    }
+};
+
 export const getRoomById = async (req, res) => {
     try {
         const id = Number(req.params.id);
@@ -124,6 +171,36 @@ export const getRoomById = async (req, res) => {
 
                     orderBy: {
                         id: "asc",
+                    },
+                },
+
+                games: {
+                    orderBy: {
+                        id: "desc",
+                    },
+                    take: 1,
+                    include: {
+                        gamePlayers: {
+                            include: {
+                                player: {
+                                    select: {
+                                        id: true,
+                                        displayName: true,
+                                    },
+                                },
+                                character: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        faction: true,
+                                        imageUrl: true,
+                                    },
+                                },
+                            },
+                            orderBy: {
+                                playerId: "asc",
+                            },
+                        },
                     },
                 },
             },

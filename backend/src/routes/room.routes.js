@@ -2,6 +2,7 @@ import express from "express";
 
 import {
     createRoom,
+    deleteRoom,
     getMyRooms,
     getRoomById,
 } from "../controllers/room.controller.js";
@@ -24,6 +25,8 @@ router.use(
 router.post("/", createRoom);
 
 router.get("/", getMyRooms);
+
+router.delete("/:id", deleteRoom);
 
 router.get("/:id", getRoomById);
 

@@ -249,7 +249,10 @@ export const deletePlayer = async (
             });
         }
 
-        if (room.status !== "WAITING") {
+        if (
+            room.status !== "WAITING" &&
+            room.status !== "FINISHED"
+        ) {
             return res.status(400).json({
                 success: false,
                 message:
@@ -369,6 +372,88 @@ export const setPlayerPassword = async (req, res) => {
         });
     }
 };
+
+export const setPlayerUsername = async (req, res) => {
+    try {
+        const roomId = Number(req.params.roomId);
+        const playerId = Number(req.params.playerId);
+        const username = req.body.username?.trim();
+
+        if (!username || username.length < 3) {
+            return res.status(400).json({
+                success: false,
+                message: "Username phải có ít nhất 3 ký tự",
+            });
+        }
+
+        const room = await prisma.room.findFirst({
+            where: {
+                id: roomId,
+                hostId: req.user.id,
+            },
+        });
+
+        if (!room) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy phòng",
+            });
+        }
+
+        const player = await prisma.player.findFirst({
+            where: {
+                id: playerId,
+                roomId,
+            },
+        });
+
+        if (!player) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy người chơi",
+            });
+        }
+
+        const existingPlayer = await prisma.player.findFirst({
+            where: {
+                username,
+                id: {
+                    not: playerId,
+                },
+            },
+        });
+
+        if (existingPlayer) {
+            return res.status(409).json({
+                success: false,
+                message: "Username đã được sử dụng",
+            });
+        }
+
+        await prisma.player.update({
+            where: {
+                id: playerId,
+            },
+            data: {
+                username,
+            },
+        });
+
+        return res.json({
+            success: true,
+            message: "Đổi username thành công",
+            username,
+        });
+    } catch (error) {
+        console.error("SET PLAYER USERNAME ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Không thể đổi username",
+        });
+    }
+};
+
 export const resetPlayerPassword = async (req, res) => {
     try {
         const roomId = Number(req.params.roomId);

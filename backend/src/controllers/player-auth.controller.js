@@ -141,8 +141,6 @@ export const getMyRole = async (
                         req.player.id,
 
                     game: {
-                        isActive: true,
-
                         roomId:
                             req.player.roomId,
                     },

@@ -18,7 +18,9 @@ import {
     Minus,
     Play,
     RotateCcw
-    ,KeyRound
+    ,KeyRound,
+    Skull,
+    UserRound
 } from "lucide-react";
 
 import api from "../../api/axios";
@@ -53,6 +55,12 @@ export default function RoomDetail() {
     const [loadingGame, setLoadingGame] =
         useState(false);
 
+    const [deadPlayerIds, setDeadPlayerIds] =
+        useState([]);
+
+    const [loadingFinish, setLoadingFinish] =
+        useState(false);
+
     const loadRoom = async () => {
         try {
             const response =
@@ -60,8 +68,16 @@ export default function RoomDetail() {
                     `/rooms/${id}`
                 );
 
-            setRoom(
-                response.data.room
+            const loadedRoom = response.data.room;
+
+            setRoom(loadedRoom);
+
+            const activeGame = loadedRoom.games?.[0];
+
+            setDeadPlayerIds(
+                activeGame?.gamePlayers
+                    ?.filter((gamePlayer) => !gamePlayer.isAlive)
+                    .map((gamePlayer) => gamePlayer.playerId) || []
             );
 
         } catch (error) {
@@ -288,6 +304,37 @@ export default function RoomDetail() {
     }
 };
 
+    const changePlayerUsername = async (
+        playerId,
+        currentUsername
+    ) => {
+        const newUsername = window.prompt(
+            "Nhập username mới:",
+            currentUsername
+        );
+
+        if (newUsername === null) {
+            return;
+        }
+
+        try {
+            await api.put(
+                `/rooms/${id}/players/${playerId}/username`,
+                {
+                    username: newUsername.trim(),
+                }
+            );
+
+            await loadRoom();
+            alert("Đổi username thành công");
+        } catch (error) {
+            alert(
+                error.response?.data?.message ||
+                "Không thể đổi username"
+            );
+        }
+    };
+
     const copyText =
         async (text) => {
 
@@ -361,6 +408,74 @@ export default function RoomDetail() {
 
             } finally {
                 setLoadingGame(false);
+            }
+        };
+
+        const toggleDeadPlayer = async (playerId) => {
+            const currentGame = room.games?.[0];
+            let nextDeadPlayerIds;
+
+            if (deadPlayerIds.includes(playerId)) {
+                nextDeadPlayerIds = deadPlayerIds.filter(
+                    (id) => id !== playerId
+                );
+            } else {
+                nextDeadPlayerIds = [
+                    ...deadPlayerIds,
+                    playerId,
+                ];
+            }
+
+            setDeadPlayerIds(nextDeadPlayerIds);
+
+            try {
+                await api.put(
+                    `/games/${currentGame.id}/deaths`,
+                    {
+                        deadPlayerIds: nextDeadPlayerIds,
+                    }
+                );
+            } catch (error) {
+                setDeadPlayerIds(deadPlayerIds);
+                setGameMessage(
+                    error.response?.data?.message ||
+                    "Không thể cập nhật trạng thái thẻ"
+                );
+            }
+        };
+
+        const finishCurrentGame = async () => {
+            const currentGame = room.games?.[0];
+
+            if (!currentGame) {
+                return;
+            }
+
+            if (!window.confirm("Kết thúc ván đấu và lưu các thẻ đã chết?")) {
+                return;
+            }
+
+            setLoadingFinish(true);
+            setGameMessage("");
+
+            try {
+                await api.post(
+                    `/games/${currentGame.id}/finish`,
+                    {
+                        deadPlayerIds,
+                    }
+                );
+
+                setGameMessage("Đã kết thúc ván đấu và lưu thẻ đã chết.");
+                setSelectedCharacters({});
+                await loadRoom();
+            } catch (error) {
+                setGameMessage(
+                    error.response?.data?.message ||
+                    "Không thể kết thúc ván chơi"
+                );
+            } finally {
+                setLoadingFinish(false);
             }
         };
 
@@ -583,7 +698,11 @@ export default function RoomDetail() {
                             ) => (
 
                                 <div
-                                    className="player-row"
+                                    className={`player-row${
+                                        deadPlayerIds.includes(player.id)
+                                            ? " dead"
+                                            : ""
+                                    }`}
                                     key={
                                         player.id
                                     }
@@ -622,6 +741,19 @@ export default function RoomDetail() {
 >
     <KeyRound size={15} />
     Đổi MK
+</button>
+
+<button
+    className="small-button"
+    onClick={() =>
+        changePlayerUsername(
+            player.id,
+            player.username
+        )
+    }
+>
+    <UserRound size={15} />
+    Đổi username
 </button>
 
 <button
@@ -834,8 +966,12 @@ export default function RoomDetail() {
                                 playerCount ||
                             playerCount <
                                 4 ||
-                            room.status !==
-                                "WAITING"
+                            (
+                                room.status !==
+                                    "WAITING" &&
+                                room.status !==
+                                    "FINISHED"
+                            )
                         }
                     >
                         <Play size={20} />
@@ -854,6 +990,76 @@ export default function RoomDetail() {
                 )}
 
             </div>
+
+            {room.games?.[0]?.isActive &&
+                room.games[0].gamePlayers?.length > 0 && (
+                <div className="panel alive-panel">
+
+                    <div className="deck-header">
+                        <div>
+                            <h2>
+                                <Skull size={20} />
+                                Thẻ bài trong ván
+                            </h2>
+
+                            <p>
+                                Chọn những thẻ đã chết trước khi kết thúc ván
+                            </p>
+                        </div>
+
+                        <strong>
+                            {deadPlayerIds.length} thẻ đã chết
+                        </strong>
+                    </div>
+
+                    <div className="dead-card-list">
+                        {room.games[0].gamePlayers.map((gamePlayer) => {
+                            const isDead = deadPlayerIds.includes(
+                                gamePlayer.playerId
+                            );
+
+                            return (
+                                <label
+                                    className={`dead-card-option${
+                                        isDead ? " selected" : ""
+                                    }`}
+                                    key={gamePlayer.id}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={isDead}
+                                        onChange={() =>
+                                            toggleDeadPlayer(
+                                                gamePlayer.playerId
+                                            )
+                                        }
+                                    />
+
+                                    <span>
+                                        <strong>
+                                            {gamePlayer.character.name}
+                                        </strong>
+                                        <small>
+                                            {gamePlayer.player.displayName}
+                                        </small>
+                                    </span>
+                                </label>
+                            );
+                        })}
+                    </div>
+
+                    <button
+                        className="finish-button"
+                        onClick={finishCurrentGame}
+                        disabled={loadingFinish}
+                    >
+                        <Skull size={18} />
+                        {loadingFinish
+                            ? "Đang kết thúc..."
+                            : "Kết thúc ván đấu"}
+                    </button>
+                </div>
+            )}
 
         </div>
     );
