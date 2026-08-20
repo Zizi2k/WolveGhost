@@ -1,0 +1,165 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+enum UserRole {
+  ADMIN
+  HOST
+}
+
+enum Faction {
+  VILLAGER
+  WEREWOLF
+  NEUTRAL
+}
+
+enum RoomStatus {
+  WAITING
+  PLAYING
+  FINISHED
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  username     String   @unique
+  passwordHash String
+  role         UserRole
+
+  rooms Room[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Character {
+  id          Int      @id @default(autoincrement())
+  name        String
+  faction     Faction
+  imageUrl    String?
+  description String   @db.Text
+  ability     String   @db.Text
+  wakeOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+
+  gameCharacters GameCharacter[]
+  gamePlayers    GamePlayer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Event {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String   @db.Text
+  imageUrl    String?
+  probability Int      @default(1)
+  isActive    Boolean  @default(true)
+
+  gameEvents GameEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Room {
+  id         Int        @id @default(autoincrement())
+  roomCode   String     @unique
+  name       String
+  maxPlayers Int
+  status     RoomStatus @default(WAITING)
+
+  hostId Int
+  host   User @relation(fields: [hostId], references: [id])
+
+  players Player[]
+  games   Game[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Player {
+  id           Int     @id @default(autoincrement())
+  displayName  String
+  username     String  @unique
+  passwordHash String
+  isOnline     Boolean @default(false)
+
+  roomId Int
+  room   Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  gamePlayers GamePlayer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Game {
+  id       Int     @id @default(autoincrement())
+  gameNo   Int
+  isActive Boolean @default(true)
+
+  roomId Int
+  room   Room @relation(fields: [roomId], references: [id])
+
+  gamePlayers    GamePlayer[]
+  gameCharacters GameCharacter[]
+  gameEvents     GameEvent[]
+
+  createdAt DateTime @default(now())
+  endedAt   DateTime?
+}
+
+model GameCharacter {
+  id Int @id @default(autoincrement())
+
+  gameId Int
+  game   Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  characterId Int
+  character   Character @relation(fields: [characterId], references: [id])
+
+  quantity Int @default(1)
+
+  createdAt DateTime @default(now())
+}
+
+model GamePlayer {
+  id Int @id @default(autoincrement())
+
+  gameId Int
+  game   Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  playerId Int
+  player   Player @relation(fields: [playerId], references: [id])
+
+  characterId Int
+  character   Character @relation(fields: [characterId], references: [id])
+
+  isAlive       Boolean @default(true)
+  hasViewedRole Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([gameId, playerId])
+}
+
+model GameEvent {
+  id Int @id @default(autoincrement())
+
+  gameId Int
+  game   Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  eventId Int
+  event   Event @relation(fields: [eventId], references: [id])
+
+  round Int
+
+  createdAt DateTime @default(now())
+}
