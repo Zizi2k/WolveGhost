@@ -3,6 +3,7 @@ import express from "express";
 import {
     getEvents,
     createEvent,
+    updateEvent,
     deleteEvent,
 } from "../controllers/event.controller.js";
 
@@ -27,6 +28,13 @@ router.post(
     authenticate,
     authorize("ADMIN"),
     createEvent
+);
+
+router.put(
+    "/:id",
+    authenticate,
+    authorize("ADMIN"),
+    updateEvent
 );
 
 router.delete(

@@ -4,7 +4,9 @@ import {
 } from "react";
 
 import {
+    Pencil,
     Plus,
+    X,
     Trash2
 } from "lucide-react";
 
@@ -22,6 +24,19 @@ export default function EventManagement() {
             imageUrl: "",
             probability: 1,
         });
+
+    const [editingId, setEditingId] =
+        useState(null);
+
+    const resetForm = () => {
+        setForm({
+            name: "",
+            description: "",
+            imageUrl: "",
+            probability: 1,
+        });
+        setEditingId(null);
+    };
 
     const loadEvents =
         async () => {
@@ -49,24 +64,26 @@ export default function EventManagement() {
         });
     };
 
-    const createEvent =
+    const saveEvent =
         async (e) => {
 
             e.preventDefault();
 
             try {
 
-                await api.post(
-                    "/events",
-                    form
-                );
+                if (editingId) {
+                    await api.put(
+                        `/events/${editingId}`,
+                        form
+                    );
+                } else {
+                    await api.post(
+                        "/events",
+                        form
+                    );
+                }
 
-                setForm({
-                    name: "",
-                    description: "",
-                    imageUrl: "",
-                    probability: 1,
-                });
+                resetForm();
 
                 loadEvents();
 
@@ -76,10 +93,22 @@ export default function EventManagement() {
                     error.response
                         ?.data
                         ?.message ||
-                    "Không thể tạo sự kiện"
+                        editingId
+                            ? "Không thể cập nhật sự kiện"
+                            : "Không thể tạo sự kiện"
                 );
             }
         };
+
+    const editEvent = (event) => {
+        setEditingId(event.id);
+        setForm({
+            name: event.name,
+            description: event.description,
+            imageUrl: event.imageUrl || "",
+            probability: event.probability,
+        });
+    };
 
     const deleteEvent =
         async (id) => {
@@ -130,14 +159,20 @@ export default function EventManagement() {
                 <div className="panel">
 
                     <h2>
-                        <Plus size={20} />
-                        Thêm sự kiện
+                        {editingId ? (
+                            <Pencil size={20} />
+                        ) : (
+                            <Plus size={20} />
+                        )}
+                        {editingId
+                            ? "Sửa sự kiện"
+                            : "Thêm sự kiện"}
                     </h2>
 
                     <form
                         className="admin-form"
                         onSubmit={
-                            createEvent
+                            saveEvent
                         }
                     >
 
@@ -202,8 +237,21 @@ export default function EventManagement() {
                         <button
                             className="primary-button"
                         >
-                            Thêm sự kiện
+                            {editingId
+                                ? "Lưu thay đổi"
+                                : "Thêm sự kiện"}
                         </button>
+
+                        {editingId && (
+                            <button
+                                type="button"
+                                className="secondary-button"
+                                onClick={resetForm}
+                            >
+                                <X size={17} />
+                                Hủy sửa
+                            </button>
+                        )}
 
                     </form>
 
@@ -249,20 +297,31 @@ export default function EventManagement() {
                                         </span>
                                     </div>
 
-                                    <button
-                                        className="icon-danger"
-                                        onClick={() =>
-                                            deleteEvent(
-                                                event.id
-                                            )
-                                        }
-                                    >
-                                        <Trash2
-                                            size={
-                                                18
+                                    <div className="event-actions">
+                                        <button
+                                            className="icon-edit"
+                                            title="Sửa sự kiện"
+                                            onClick={() =>
+                                                editEvent(
+                                                    event
+                                                )
                                             }
-                                        />
-                                    </button>
+                                        >
+                                            <Pencil size={18} />
+                                        </button>
+
+                                        <button
+                                            className="icon-danger"
+                                            title="Xóa sự kiện"
+                                            onClick={() =>
+                                                deleteEvent(
+                                                    event.id
+                                                )
+                                            }
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    </div>
 
                                 </div>
 

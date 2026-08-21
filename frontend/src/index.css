@@ -686,6 +686,7 @@ input {
 }
 
 .icon-danger,
+.icon-edit,
 .danger-button {
     border: none;
 
@@ -699,6 +700,18 @@ input {
     color: #f87171;
 }
 
+.icon-edit {
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    background: rgba(99, 102, 241, 0.13);
+    color: #a5b4fc;
+}
+
 .icon-danger {
     width: 36px;
     height: 36px;
@@ -706,6 +719,30 @@ input {
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.event-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.secondary-button {
+    margin-top: 8px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+
+    padding: 12px 18px;
+
+    border: 1px solid #30384a;
+    border-radius: 11px;
+
+    background: #101624;
+    color: #d1d5db;
+    cursor: pointer;
 }
 
 .danger-button {
