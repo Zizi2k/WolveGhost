@@ -153,6 +153,9 @@ export default function PlayerRolePage() {
 
                 <div
                     className="role-card role-front"
+                    onClick={() =>
+                        setRevealed(false)
+                    }
                 >
 
                     {role.role.imageUrl && (
@@ -209,6 +212,10 @@ export default function PlayerRolePage() {
                                 : "💀 Đã chết"
                         }
                     </p>
+
+                        <p>
+                            Nhấn để úp thẻ
+                        </p>
 
                 </div>
 
