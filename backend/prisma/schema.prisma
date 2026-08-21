@@ -95,6 +95,7 @@ model Player {
   room   Room @relation(fields: [roomId], references: [id], onDelete: Cascade)
 
   gamePlayers GamePlayer[]
+  gameNights  GameNight[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -111,6 +112,7 @@ model Game {
   gamePlayers    GamePlayer[]
   gameCharacters GameCharacter[]
   gameEvents     GameEvent[]
+  gameNights     GameNight[]
 
   createdAt DateTime @default(now())
   endedAt   DateTime?
@@ -162,4 +164,18 @@ model GameEvent {
   round Int
 
   createdAt DateTime @default(now())
+}
+
+model GameNight {
+  id       Int @id @default(autoincrement())
+  gameId   Int
+  game     Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  playerId Int
+  player   Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  night    Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([gameId, night, playerId])
+  @@index([gameId, night])
 }

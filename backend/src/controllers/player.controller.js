@@ -69,7 +69,10 @@ export const addPlayer = async (req, res) => {
             });
         }
 
-        if (room.status !== "WAITING") {
+        if (
+            room.status !== "WAITING" &&
+            room.status !== "FINISHED"
+        ) {
             return res.status(400).json({
                 success: false,
                 message: "Không thể thêm người khi ván đã bắt đầu",

@@ -3,6 +3,7 @@ import express from "express";
 import {
     createGame,
     dealCharacters,
+    drawNightEvent,
     finishGame,
     updateGameDeaths,
 } from "../controllers/game.controller.js";
@@ -36,6 +37,13 @@ router.post(
     authenticate,
     authorize("HOST"),
     finishGame
+);
+
+router.post(
+    "/games/:gameId/events/random",
+    authenticate,
+    authorize("HOST"),
+    drawNightEvent
 );
 
 router.put(

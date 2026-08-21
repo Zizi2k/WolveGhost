@@ -216,6 +216,25 @@ input {
     justify-content: center;
 
     padding: 25px;
+    position: relative;
+}
+
+.player-return-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 13px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 9px;
+    background: rgba(255,255,255,0.06);
+    color: #e5e7eb;
+    cursor: pointer;
+}
+
+.role-return-button {
+    position: absolute;
+    top: 24px;
+    left: 24px;
 }
 
 .role-card {
@@ -1405,6 +1424,10 @@ input {
     accent-color: #ef4444;
 }
 
+.dead-card-option input:disabled {
+    cursor: not-allowed;
+}
+
 .dead-card-option span {
     display: flex;
     flex-direction: column;
@@ -1413,6 +1436,63 @@ input {
 
 .dead-card-option small {
     color: #a1a1aa;
+}
+
+.night-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 20px;
+}
+
+.night-button {
+    min-width: 72px;
+    padding: 9px 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.04);
+    color: #d1d5db;
+    cursor: pointer;
+}
+
+.night-button.active {
+    border-color: #f87171;
+    background: rgba(248,113,113,0.14);
+    color: #fff;
+}
+
+.night-button small {
+    display: block;
+    margin-top: 3px;
+    color: #fca5a5;
+}
+
+.night-event-box {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-top: 16px;
+    padding: 15px;
+    border: 1px solid rgba(251,191,36,0.25);
+    border-radius: 10px;
+    background: rgba(251,191,36,0.08);
+}
+
+.night-event-box h3 {
+    margin: 7px 0 4px;
+    color: #fde68a;
+}
+
+.night-event-box p {
+    margin: 0;
+    color: #d1d5db;
+}
+
+@media (max-width: 700px) {
+    .night-event-box {
+        flex-direction: column;
+    }
 }
 
 .finish-button {

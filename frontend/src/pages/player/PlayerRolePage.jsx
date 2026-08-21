@@ -5,7 +5,17 @@ import {
 
 import axios from "axios";
 
+import {
+    ArrowLeft
+} from "lucide-react";
+
+import {
+    useNavigate
+} from "react-router-dom";
+
 export default function PlayerRolePage() {
+
+    const navigate = useNavigate();
 
     const [role, setRole] =
         useState(null);
@@ -85,6 +95,13 @@ export default function PlayerRolePage() {
                     className="login-card"
                 >
                     {error}
+                    <button
+                        className="player-return-button"
+                        onClick={navigateToLogin}
+                    >
+                        <ArrowLeft size={17} />
+                        Quay lại đăng nhập
+                    </button>
                 </div>
             </div>
         );
@@ -102,6 +119,14 @@ export default function PlayerRolePage() {
 
     return (
         <div className="role-page">
+
+            <button
+                className="player-return-button role-return-button"
+                onClick={navigateToLogin}
+            >
+                <ArrowLeft size={17} />
+                Quay lại đăng nhập
+            </button>
 
             {!revealed ? (
 
@@ -191,4 +216,10 @@ export default function PlayerRolePage() {
 
         </div>
     );
+
+    function navigateToLogin() {
+        localStorage.removeItem("playerToken");
+        localStorage.removeItem("player");
+        navigate("/player-login");
+    }
 }

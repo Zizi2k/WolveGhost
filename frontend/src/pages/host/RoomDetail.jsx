@@ -58,8 +58,35 @@ export default function RoomDetail() {
     const [deadPlayerIds, setDeadPlayerIds] =
         useState([]);
 
+    const [selectedNight, setSelectedNight] =
+        useState(1);
+
+    const [nightDeaths, setNightDeaths] =
+        useState({});
+
+    const [nightEvents, setNightEvents] =
+        useState({});
+
+    const [loadingEvent, setLoadingEvent] =
+        useState(false);
+
     const [loadingFinish, setLoadingFinish] =
         useState(false);
+
+    const getDeathsThroughNight = (
+        deaths,
+        night
+    ) => {
+        return [
+            ...new Set(
+                Object.entries(deaths)
+                    .filter(([deathNight]) =>
+                        Number(deathNight) <= night
+                    )
+                    .flatMap(([, playerIds]) => playerIds)
+            ),
+        ];
+    };
 
     const loadRoom = async () => {
         try {
@@ -74,10 +101,25 @@ export default function RoomDetail() {
 
             const activeGame = loadedRoom.games?.[0];
 
+            const loadedNightDeaths = {};
+            const loadedNightEvents = {};
+            activeGame?.gameNights?.forEach((death) => {
+                loadedNightDeaths[death.night] = [
+                    ...(loadedNightDeaths[death.night] || []),
+                    death.playerId,
+                ];
+            });
+            activeGame?.gameEvents?.forEach((gameEvent) => {
+                loadedNightEvents[gameEvent.round] = gameEvent.event;
+            });
+
+            setNightDeaths(loadedNightDeaths);
+            setNightEvents(loadedNightEvents);
             setDeadPlayerIds(
-                activeGame?.gamePlayers
-                    ?.filter((gamePlayer) => !gamePlayer.isAlive)
-                    .map((gamePlayer) => gamePlayer.playerId) || []
+                getDeathsThroughNight(
+                    loadedNightDeaths,
+                    selectedNight
+                )
             );
 
         } catch (error) {
@@ -411,32 +453,85 @@ export default function RoomDetail() {
             }
         };
 
+        const drawNightEvent = async () => {
+            const currentGame = room.games?.[0];
+
+            if (!currentGame) {
+                return;
+            }
+
+            setLoadingEvent(true);
+            setGameMessage("");
+
+            try {
+                const response = await api.post(
+                    `/games/${currentGame.id}/events/random`,
+                    {
+                        night: selectedNight,
+                    }
+                );
+
+                setNightEvents((current) => ({
+                    ...current,
+                    [selectedNight]: response.data.event,
+                }));
+            } catch (error) {
+                setGameMessage(
+                    error.response?.data?.message ||
+                    "Không thể bốc sự kiện"
+                );
+            } finally {
+                setLoadingEvent(false);
+            }
+        };
+
         const toggleDeadPlayer = async (playerId) => {
             const currentGame = room.games?.[0];
+            const previousNightDeaths = nightDeaths;
+            const currentNightDeaths = nightDeaths[selectedNight] || [];
             let nextDeadPlayerIds;
 
-            if (deadPlayerIds.includes(playerId)) {
-                nextDeadPlayerIds = deadPlayerIds.filter(
+            if (currentNightDeaths.includes(playerId)) {
+                nextDeadPlayerIds = currentNightDeaths.filter(
                     (id) => id !== playerId
                 );
             } else {
                 nextDeadPlayerIds = [
-                    ...deadPlayerIds,
+                    ...currentNightDeaths,
                     playerId,
                 ];
             }
 
-            setDeadPlayerIds(nextDeadPlayerIds);
+            setDeadPlayerIds(
+                getDeathsThroughNight(
+                    {
+                        ...nightDeaths,
+                        [selectedNight]: nextDeadPlayerIds,
+                    },
+                    selectedNight
+                )
+            );
+            setNightDeaths((current) => ({
+                ...current,
+                [selectedNight]: nextDeadPlayerIds,
+            }));
 
             try {
                 await api.put(
                     `/games/${currentGame.id}/deaths`,
                     {
                         deadPlayerIds: nextDeadPlayerIds,
+                        night: selectedNight,
                     }
                 );
             } catch (error) {
-                setDeadPlayerIds(deadPlayerIds);
+                setDeadPlayerIds(
+                    getDeathsThroughNight(
+                        previousNightDeaths,
+                        selectedNight
+                    )
+                );
+                setNightDeaths(previousNightDeaths);
                 setGameMessage(
                     error.response?.data?.message ||
                     "Không thể cập nhật trạng thái thẻ"
@@ -462,7 +557,11 @@ export default function RoomDetail() {
                 await api.post(
                     `/games/${currentGame.id}/finish`,
                     {
-                        deadPlayerIds,
+                        deadPlayerIds: [
+                            ...new Set(
+                                Object.values(nightDeaths).flat()
+                            ),
+                        ],
                     }
                 );
 
@@ -591,7 +690,9 @@ export default function RoomDetail() {
                             className="primary-button"
                             disabled={
                                 room.status !==
-                                    "WAITING" ||
+                                    "WAITING" &&
+                                room.status !==
+                                    "FINISHED" ||
                                 room.players
                                     .length >=
                                     room.maxPlayers
@@ -1017,6 +1118,11 @@ export default function RoomDetail() {
                             const isDead = deadPlayerIds.includes(
                                 gamePlayer.playerId
                             );
+                            const diedEarlier = Object.entries(nightDeaths)
+                                .some(([night, playerIds]) =>
+                                    Number(night) < selectedNight &&
+                                    playerIds.includes(gamePlayer.playerId)
+                                );
 
                             return (
                                 <label
@@ -1028,6 +1134,7 @@ export default function RoomDetail() {
                                     <input
                                         type="checkbox"
                                         checked={isDead}
+                                        disabled={diedEarlier}
                                         onChange={() =>
                                             toggleDeadPlayer(
                                                 gamePlayer.playerId
@@ -1046,6 +1153,57 @@ export default function RoomDetail() {
                                 </label>
                             );
                         })}
+                    </div>
+
+                    <div className="night-list" aria-label="Chọn đêm">
+                        {Array.from({ length: 10 }, (_, index) => index + 1).map(
+                            (night) => (
+                                <button
+                                    className={`night-button${selectedNight === night ? " active" : ""}`}
+                                    key={night}
+                                    onClick={() => {
+                                        setSelectedNight(night);
+                                        setDeadPlayerIds(
+                                            getDeathsThroughNight(
+                                                nightDeaths,
+                                                night
+                                            )
+                                        );
+                                    }}
+                                >
+                                    Đêm {night}
+                                    {(nightDeaths[night]?.length || 0) > 0 && (
+                                        <small>{nightDeaths[night].length} chết</small>
+                                    )}
+                                </button>
+                            )
+                        )}
+                    </div>
+
+                    <div className="night-event-box">
+                        <div>
+                            <strong>Sự kiện đêm {selectedNight}</strong>
+                            {nightEvents[selectedNight] ? (
+                                <>
+                                    <h3>{nightEvents[selectedNight].name}</h3>
+                                    <p>{nightEvents[selectedNight].description}</p>
+                                </>
+                            ) : (
+                                <p>Chưa bốc sự kiện cho đêm này.</p>
+                            )}
+                        </div>
+
+                        <button
+                            className="small-button"
+                            onClick={drawNightEvent}
+                            disabled={loadingEvent || Boolean(nightEvents[selectedNight])}
+                        >
+                            {loadingEvent
+                                ? "Đang bốc..."
+                                : nightEvents[selectedNight]
+                                ? "Đã bốc"
+                                : "Bốc sự kiện"}
+                        </button>
                     </div>
 
                     <button

@@ -22,6 +22,24 @@ function shuffle(array) {
 
     return result;
 }
+
+function pickWeightedEvent(events) {
+    const totalWeight = events.reduce(
+        (sum, event) => sum + Math.max(1, event.probability),
+        0
+    );
+    let target = crypto.randomInt(1, totalWeight + 1);
+
+    for (const event of events) {
+        target -= Math.max(1, event.probability);
+
+        if (target <= 0) {
+            return event;
+        }
+    }
+
+    return events[events.length - 1];
+}
 export const createGame = async (
     req,
     res
@@ -365,6 +383,93 @@ export const dealCharacters = async (
     }
 };
 
+export const drawNightEvent = async (
+    req,
+    res
+) => {
+    try {
+        const gameId = Number(req.params.gameId);
+        const night = Number(req.body.night);
+
+        if (!Number.isInteger(night) || night < 1 || night > 10) {
+            return res.status(400).json({
+                success: false,
+                message: "Đêm phải nằm trong khoảng từ 1 đến 10",
+            });
+        }
+
+        const game = await prisma.game.findFirst({
+            where: {
+                id: gameId,
+                isActive: true,
+                room: {
+                    hostId: req.user.id,
+                },
+            },
+        });
+
+        if (!game) {
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy ván đang chơi",
+            });
+        }
+
+        const existingGameEvent = await prisma.gameEvent.findFirst({
+            where: {
+                gameId,
+                round: night,
+            },
+            include: {
+                event: true,
+            },
+        });
+
+        if (existingGameEvent) {
+            return res.json({
+                success: true,
+                event: existingGameEvent.event,
+                existing: true,
+            });
+        }
+
+        const events = await prisma.event.findMany({
+            where: {
+                isActive: true,
+            },
+        });
+
+        if (events.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Chưa có sự kiện đang hoạt động",
+            });
+        }
+
+        const event = pickWeightedEvent(events);
+        await prisma.gameEvent.create({
+            data: {
+                gameId,
+                eventId: event.id,
+                round: night,
+            },
+        });
+
+        return res.json({
+            success: true,
+            event,
+            existing: false,
+        });
+    } catch (error) {
+        console.error("DRAW NIGHT EVENT ERROR:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Không thể bốc sự kiện",
+        });
+    }
+};
+
 export const finishGame = async (
     req,
     res
@@ -479,6 +584,14 @@ export const updateGameDeaths = async (
     try {
         const gameId = Number(req.params.gameId);
         const deadPlayerIds = req.body.deadPlayerIds;
+        const night = Number(req.body.night);
+
+        if (!Number.isInteger(night) || night < 1 || night > 10) {
+            return res.status(400).json({
+                success: false,
+                message: "Đêm phải nằm trong khoảng từ 1 đến 10",
+            });
+        }
 
         if (!Array.isArray(deadPlayerIds)) {
             return res.status(400).json({
@@ -525,26 +638,47 @@ export const updateGameDeaths = async (
         }
 
         await prisma.$transaction(async (tx) => {
-            await tx.gamePlayer.updateMany({
+            await tx.gameNight.deleteMany({
                 where: {
                     gameId,
-                },
-                data: {
-                    isAlive: true,
+                    night,
                 },
             });
 
             if (uniqueDeadPlayerIds.length > 0) {
+                await tx.gameNight.createMany({
+                    data: uniqueDeadPlayerIds.map((playerId) => ({
+                        gameId,
+                        night,
+                        playerId,
+                    })),
+                });
+            }
+
+            const recordedDeaths = await tx.gameNight.findMany({
+                where: { gameId },
+                select: { playerId: true },
+                distinct: ["playerId"],
+            });
+            const recordedPlayerIds = recordedDeaths.map(
+                (death) => death.playerId
+            );
+
+            await tx.gamePlayer.updateMany({
+                where: {
+                    gameId,
+                    playerId: { notIn: recordedPlayerIds },
+                },
+                data: { isAlive: true },
+            });
+
+            if (recordedPlayerIds.length > 0) {
                 await tx.gamePlayer.updateMany({
                     where: {
                         gameId,
-                        playerId: {
-                            in: uniqueDeadPlayerIds,
-                        },
+                        playerId: { in: recordedPlayerIds },
                     },
-                    data: {
-                        isAlive: false,
-                    },
+                    data: { isAlive: false },
                 });
             }
         });

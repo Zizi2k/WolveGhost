@@ -201,6 +201,24 @@ export const getRoomById = async (req, res) => {
                                 playerId: "asc",
                             },
                         },
+                        gameNights: {
+                            select: {
+                                night: true,
+                                playerId: true,
+                            },
+                            orderBy: [
+                                { night: "asc" },
+                                { playerId: "asc" },
+                            ],
+                        },
+                        gameEvents: {
+                            include: {
+                                event: true,
+                            },
+                            orderBy: {
+                                round: "asc",
+                            },
+                        },
                     },
                 },
             },
